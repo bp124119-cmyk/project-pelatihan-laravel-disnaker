@@ -1,9 +1,9 @@
 @php
     $page = 'beranda';
 
-    if (request()->routeIs('article')) {
+    if (request()->routeIs('article*')) {
         $page = 'artikel';
-    } elseif (request()->routeIs('about')) {
+    } elseif (request()->routeIs('aboutus')) {
         $page = 'tentang';
     } elseif (request()->routeIs('service')) {
         $page = 'layanan';

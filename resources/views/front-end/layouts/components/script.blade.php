@@ -1,42 +1,60 @@
-  <script>
+<script>
+    (() => {
         const viewport = document.querySelector('.embla__viewport');
         const slides = document.querySelectorAll('.embla__slide');
+        if (!viewport || slides.length < 2) return;
+
         let timer = null;
+        const step = () => slides[1].offsetLeft - slides[0].offsetLeft;
+
         const next = () => {
-            const step = slides[1].offsetLeft - slides[0].offsetLeft;
             const atEnd = viewport.scrollLeft + viewport.clientWidth >= viewport.scrollWidth - 4;
             viewport.scrollTo({
-                left: atEnd ? 0 : viewport.scrollLeft + step,
+                left: atEnd ? 0 : viewport.scrollLeft + step(),
                 behavior: 'smooth'
             });
         };
         const prev = () => {
-            const step = slides[1].offsetLeft - slides[0].offsetLeft;
             const atStart = viewport.scrollLeft <= 4;
             viewport.scrollTo({
-                left: atStart ? viewport.scrollWidth : viewport.scrollLeft - step,
+                left: atStart ? viewport.scrollWidth : viewport.scrollLeft - step(),
                 behavior: 'smooth'
             });
         };
+
+        const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
         const stop = () => clearInterval(timer);
         const start = () => {
             stop();
-            timer = setInterval(next, 4000);
+            if (!reduceMotion) timer = setInterval(next, 4000);
         };
-        viewport.addEventListener('mouseenter', stop);
-        viewport.addEventListener('mouseleave', start);
-        document.getElementById('ulasan-prev').addEventListener('click', () => {
+
+        ['mouseenter', 'touchstart', 'focusin'].forEach((e) =>
+            viewport.addEventListener(e, stop, {
+                passive: true
+            }));
+        ['mouseleave', 'touchend', 'focusout'].forEach((e) =>
+            viewport.addEventListener(e, start));
+
+        document.getElementById('ulasan-prev')?.addEventListener('click', () => {
             prev();
             start();
         });
-        document.getElementById('ulasan-next').addEventListener('click', () => {
+        document.getElementById('ulasan-next')?.addEventListener('click', () => {
             next();
             start();
         });
+
         start();
-    </script>
-    <script>
+    })();
+</script>
+
+<script>
+    // Header sticky
+    (() => {
         const header = document.querySelector('header');
+        if (!header) return;
+
         const onScroll = () => {
             const scrolled = window.scrollY > 80;
             if (scrolled === header.classList.contains('fixed')) return;
@@ -46,7 +64,8 @@
                 header.classList.add('fixed', 'bg-paper', 'border-b-4', 'border-ink', '-translate-y-full');
                 header.offsetHeight;
                 header.style.transition = '';
-                requestAnimationFrame(() => requestAnimationFrame(() => header.classList.remove('-translate-y-full')));
+                requestAnimationFrame(() => requestAnimationFrame(() => header.classList.remove(
+                    '-translate-y-full')));
             } else {
                 header.classList.remove('fixed', 'bg-paper', 'border-b-4', 'border-ink', '-translate-y-full');
                 header.classList.add('absolute');
@@ -58,21 +77,26 @@
             passive: true
         });
         onScroll();
-    </script>
-    <script>
-        // Status aktif: sinkron antara scroll-spy dan menu
-        // Bottom nav hanya punya 4 tab: beranda, layanan, artikel, tentang.
-        // Section lain (proses, kontak) dipetakan ke tab terdekat.
+    })();
+</script>
+
+<script>
+    // Link aktif (menu desktop + bottom nav)
+    (() => {
         const spyLinks = document.querySelectorAll('[data-spy]');
+        const page = document.body.dataset.page || 'beranda';
+
+        // Halaman lain section di landing page dipetakan ke tab yang ada di landing page
         const sectionToTab = {
             beranda: 'beranda',
             proses: 'layanan',
             layanan: 'layanan',
-            artikel: 'artikel',
-            ulasan: 'artikel',
-            tentang: 'tentang',
-            kontak: 'tentang',
+            artikel: 'layanan',
+            ulasan: 'layanan',
+            tentang: 'layanan',
+            kontak: 'layanan',
         };
+
         const setActive = (tabId) => {
             spyLinks.forEach((link) => {
                 const on = link.dataset.spy === tabId;
@@ -81,22 +105,28 @@
                 else link.removeAttribute('aria-current');
             });
         };
-        const sections = Object.keys(sectionToTab)
-            .map((id) => document.getElementById(id))
-            .filter(Boolean);
+
+        setActive(page);
+
+        // Scroll-spy hanya di landing page
+        if (page !== 'beranda') return;
+
         const observer = new IntersectionObserver((entries) => {
             entries.forEach((entry) => {
-                if (!entry.isIntersecting) return;
-                const tab = sectionToTab[entry.target.id] || 'beranda';
-                setActive(tab);
+                if (entry.isIntersecting) {
+                    setActive(sectionToTab[entry.target.id] || 'beranda');
+                }
             });
         }, {
             rootMargin: '-45% 0px -50% 0px'
         });
-        sections.forEach((section) => observer.observe(section));
-        // Set awal
-        setActive('beranda');
-    </script>
+
+        Object.keys(sectionToTab)
+            .map((id) => document.getElementById(id))
+            .filter(Boolean)
+            .forEach((s) => observer.observe(s));
+    })();
+</script>
 </body>
 
 </html>
